@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QTextEdit,
     QButtonGroup,
-    QMessageBox
+    QPlainTextEdit,
 )
 
 from PySide6.QtCore import Qt
@@ -106,6 +106,22 @@ def get_current_efi():
 
     except Exception:
         return ""
+
+def add_log(widget, message):
+
+    if hasattr(widget, "log_box"):
+
+        widget.log_box.appendPlainText(
+            message
+        )
+
+def log(widget, text):
+
+    if hasattr(widget, "console_text"):
+
+        widget.console_text.appendPlainText(
+            text
+        )
 
 
 
@@ -382,6 +398,11 @@ class BootSwitcher(QWidget):
         )
 
 
+        self.bios = QCheckBox(
+        "Reboot into BIOS / UEFI firmware"
+        )
+
+
         checkbox_style = """
 
         QCheckBox {
@@ -411,6 +432,9 @@ class BootSwitcher(QWidget):
             checkbox_style
         )
 
+        self.bios.setStyleSheet(
+            checkbox_style
+        )
 
         behaviour_layout.addWidget(
             self.immediate
@@ -418,6 +442,10 @@ class BootSwitcher(QWidget):
 
         behaviour_layout.addWidget(
             self.permanent
+        )
+
+        behaviour_layout.addWidget(
+            self.bios
         )
 
 
@@ -439,6 +467,26 @@ class BootSwitcher(QWidget):
             "Ready"
         )
 
+        self.log_box = QPlainTextEdit()
+
+        self.log_box.setReadOnly(True)
+
+        self.log_box.setMaximumHeight(
+            180
+        )
+
+        self.log_box.hide()
+
+
+        self.show_log = QPushButton(
+            "Show Log"
+        )
+
+
+        self.show_log.clicked.connect(
+            self.toggle_log
+        )
+
 
         apply = QPushButton(
             "APPLY CHANGES"
@@ -454,10 +502,20 @@ class BootSwitcher(QWidget):
             self.status
         )
 
+        bottom.addWidget(
+            self.show_log
+        )
+
         bottom.addStretch()
+
 
         bottom.addWidget(
             apply
+        )
+
+
+        main.addWidget(
+            self.log_box
         )
 
 
@@ -480,6 +538,11 @@ class BootSwitcher(QWidget):
             f"Selected: {entry['name']}"
         )
 
+        add_log(
+            self,
+            f"Selected: {entry['name']} ({entry['id']})"
+        )
+
 
 
     def show_info(self, entry):
@@ -488,7 +551,54 @@ class BootSwitcher(QWidget):
 
 
 
+    def toggle_log(self):
+
+        if self.log_box.isVisible():
+
+            self.log_box.hide()
+
+            self.show_log.setText(
+                "Show Log"
+            )
+
+        else:
+
+            self.log_box.show()
+
+            self.show_log.setText(
+                "Hide Log"
+            )
+
+
+
     def apply_changes(self):
+
+        if self.bios.isChecked():
+
+            self.status.setText(
+                "Rebooting into firmware setup..."
+            )
+
+            add_log(
+                self,
+                "Requesting BIOS / UEFI reboot"
+            )
+
+            QApplication.processEvents()
+
+            time.sleep(2)
+
+            subprocess.Popen(
+                [
+                    "systemctl",
+                    "reboot",
+                    "--firmware-setup"
+                ]
+            )
+
+            return
+
+
 
         if not self.selected:
 
@@ -496,7 +606,13 @@ class BootSwitcher(QWidget):
                 "No OS selected"
             )
 
+            add_log(
+                self,
+                "ERROR: No OS selected"
+            )
+
             return
+
 
 
         mode = (
@@ -507,11 +623,18 @@ class BootSwitcher(QWidget):
         )
 
 
+        add_log(
+            self,
+            f"Applying {mode} boot change"
+        )
+
+
         try:
 
             result = subprocess.run(
                 [
                     "pkexec",
+                    sys.executable,
                     BACKEND,
                     self.selected["id"],
                     mode
@@ -521,10 +644,31 @@ class BootSwitcher(QWidget):
             )
 
 
+            if result.stdout:
+
+                add_log(
+                    self,
+                    result.stdout
+                )
+
+
+            if result.stderr:
+
+                add_log(
+                    self,
+                    result.stderr
+                )
+
+
             if result.returncode != 0:
 
                 self.status.setText(
                     "EFI change cancelled or failed"
+                )
+
+                add_log(
+                    self,
+                    "Backend returned an error"
                 )
 
                 return
@@ -533,7 +677,12 @@ class BootSwitcher(QWidget):
         except Exception as e:
 
             self.status.setText(
-                str(e)
+                "Error: " + str(e)
+            )
+
+            add_log(
+                self,
+                "Exception: " + str(e)
             )
 
             return
@@ -544,6 +693,11 @@ class BootSwitcher(QWidget):
             "Checking EFI change..."
         )
 
+        add_log(
+            self,
+            "Checking EFI state..."
+        )
+
         QApplication.processEvents()
 
 
@@ -551,6 +705,12 @@ class BootSwitcher(QWidget):
 
 
         efi = get_current_efi()
+
+
+        add_log(
+            self,
+            efi
+        )
 
 
         success = False
@@ -593,11 +753,21 @@ class BootSwitcher(QWidget):
                 f"✓ {self.selected['name']} applied successfully"
             )
 
+            add_log(
+                self,
+                f"SUCCESS: {self.selected['name']} applied"
+            )
+
 
             if self.immediate.isChecked():
 
                 self.status.setText(
                     "Rebooting..."
+                )
+
+                add_log(
+                    self,
+                    "Rebooting system"
                 )
 
                 QApplication.processEvents()
@@ -618,9 +788,14 @@ class BootSwitcher(QWidget):
                 "✗ EFI verification failed - reboot cancelled"
             )
 
+            add_log(
+                self,
+                "ERROR: EFI verification failed"
+            )
 
 
-if __name__ == "__main__":
+
+def main():
 
     app = QApplication(sys.argv)
 
@@ -631,3 +806,8 @@ if __name__ == "__main__":
     sys.exit(
         app.exec()
     )
+
+
+if __name__ == "__main__":
+
+    main()

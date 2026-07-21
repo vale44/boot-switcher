@@ -7,26 +7,40 @@ import re
 
 def run(cmd):
 
-    print("Running:", " ".join(cmd))
+    print(
+        "Running:",
+        " ".join(cmd)
+    )
 
-    result = subprocess.run(cmd)
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True
+    )
 
-    if result.returncode != 0:
-        sys.exit(result.returncode)
+    if result.stdout:
+        print(result.stdout)
+
+    if result.stderr:
+        print(result.stderr)
+
+    return result
 
 
 
 def efiboot_output():
 
-    result = subprocess.run(
-        ["efibootmgr"],
-        capture_output=True,
-        text=True
+    result = run(
+        [
+            "efibootmgr"
+        ]
     )
 
     if result.returncode != 0:
-        print(result.stderr)
-        sys.exit(1)
+
+        raise RuntimeError(
+            "Could not read EFI entries"
+        )
 
     return result.stdout
 
@@ -42,6 +56,7 @@ def get_boot_order():
     )
 
     if match:
+
         return match.group(1).split(",")
 
     return []
@@ -50,11 +65,19 @@ def get_boot_order():
 
 def set_once(entry):
 
-    run([
-        "efibootmgr",
-        "-n",
-        entry
-    ])
+    result = run(
+        [
+            "efibootmgr",
+            "-n",
+            entry
+        ]
+    )
+
+    if result.returncode != 0:
+
+        raise RuntimeError(
+            "Failed setting BootNext"
+        )
 
 
 
@@ -62,18 +85,34 @@ def set_permanent(entry):
 
     old_order = get_boot_order()
 
-    new_order = [entry]
+
+    new_order = [
+        entry
+    ]
+
 
     for item in old_order:
+
         if item not in new_order:
+
             new_order.append(item)
 
 
-    run([
-        "efibootmgr",
-        "-o",
-        ",".join(new_order)
-    ])
+
+    result = run(
+        [
+            "efibootmgr",
+            "-o",
+            ",".join(new_order)
+        ]
+    )
+
+
+    if result.returncode != 0:
+
+        raise RuntimeError(
+            "Failed changing BootOrder"
+        )
 
 
 
@@ -86,38 +125,66 @@ def main():
 Usage:
 
 One time:
-    boot-switcher.py ENTRY_ID once
+    backend.py ENTRY_ID once
 
 Permanent:
-    boot-switcher.py ENTRY_ID permanent
+    backend.py ENTRY_ID permanent
 """
         )
 
-        return
+        return 1
 
 
 
     entry = sys.argv[1]
+
     mode = sys.argv[2].lower()
 
 
 
-    if mode == "once":
+    try:
 
-        set_once(entry)
+        if mode == "once":
 
-
-    elif mode == "permanent":
-
-        set_permanent(entry)
+            set_once(entry)
 
 
-    else:
+        elif mode == "permanent":
 
-        print("Unknown mode")
-        sys.exit(1)
+            set_permanent(entry)
+
+
+        else:
+
+            print(
+                "Unknown mode"
+            )
+
+            return 1
+
+
+
+    except Exception as e:
+
+        print(
+            "ERROR:",
+            str(e)
+        )
+
+        return 1
+
+
+
+    print(
+        "SUCCESS"
+    )
+
+    return 0
 
 
 
 if __name__ == "__main__":
-    main()
+
+    sys.exit(
+        main()
+    )
