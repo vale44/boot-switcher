@@ -1,20 +1,25 @@
 # Python virtual environment
-venv/
-
 # Python cache
 __pycache__/
 *.py[cod]
 
+# Virtual environments
+venv/
+.venv/
+
 # IDE files
 .vscode/
+
+# Linux desktop files
+*.desktop
 
 # Logs
 *.log
 
+# Build files
+build/
+dist/
+
 # OS files
 .DS_Store
 Thumbs.db
-
-# Temporary files
-*.tmp
-*.bak
