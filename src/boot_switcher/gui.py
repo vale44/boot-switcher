@@ -529,6 +529,14 @@ class BootSwitcher(QWidget):
         )
 
 
+    def keyPressEvent(self, event):
+
+        if event.key() == Qt.Key_Escape:
+            self.close()
+
+        else:
+            super().keyPressEvent(event)
+
 
     def select(self, entry):
 
