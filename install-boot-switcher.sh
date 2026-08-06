@@ -3,16 +3,17 @@
 set -e
 
 APP_NAME="boot-switcher"
+
 REPO="https://github.com/vale44/boot-switcher/archive/refs/heads/main.tar.gz"
 
 INSTALL_DIR="/opt/$APP_NAME"
 BIN_PATH="/usr/local/bin/$APP_NAME"
 DESKTOP_PATH="/usr/share/applications/$APP_NAME.desktop"
+ICON_PATH="/usr/share/icons/hicolor/scalable/apps/$APP_NAME.svg"
 
 GREEN="\033[0;32m"
 RED="\033[0;31m"
 YELLOW="\033[1;33m"
-BLUE="\033[0;34m"
 RESET="\033[0m"
 
 
@@ -44,7 +45,6 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 
-
 if [ ! -d /sys/firmware/efi ]; then
 
     error "UEFI firmware not detected"
@@ -58,7 +58,6 @@ fi
 success "UEFI firmware detected"
 
 
-
 echo
 echo "Checking dependencies..."
 echo
@@ -67,6 +66,7 @@ echo
 install_package() {
 
     PACKAGE="$1"
+
 
     if command -v apt >/dev/null 2>&1; then
 
@@ -92,12 +92,12 @@ install_package() {
     else
 
         error "Unsupported package manager"
+
         exit 1
 
     fi
 
 }
-
 
 
 check_command() {
@@ -133,16 +133,15 @@ check_command() {
 }
 
 
-
 check_command python3 python3
 check_command efibootmgr efibootmgr
 check_command pkexec policykit-1
 
 
-
 if ! python3 -m venv --help >/dev/null 2>&1; then
 
     warning "Python venv missing"
+
 
     if command -v apt >/dev/null 2>&1; then
 
@@ -168,7 +167,6 @@ echo "Installing Boot Switcher..."
 echo
 
 
-
 TEMP_DIR=$(mktemp -d)
 
 
@@ -177,16 +175,13 @@ echo "Downloading files..."
 curl -L "$REPO" -o "$TEMP_DIR/source.tar.gz"
 
 
-
 mkdir -p "$TEMP_DIR/extract"
 
 
 tar -xzf "$TEMP_DIR/source.tar.gz" -C "$TEMP_DIR/extract"
 
 
-
 SOURCE_DIR=$(find "$TEMP_DIR/extract" -maxdepth 1 -type d -name "boot-switcher-*")
-
 
 
 rm -rf "$INSTALL_DIR"
@@ -194,14 +189,32 @@ rm -rf "$INSTALL_DIR"
 mkdir -p "$INSTALL_DIR"
 
 
-
 cp -r "$SOURCE_DIR/run.py" "$INSTALL_DIR/"
 cp -r "$SOURCE_DIR/src" "$INSTALL_DIR/"
 cp "$SOURCE_DIR/requirements.txt" "$INSTALL_DIR/"
 
 
-
 success "Files copied"
+
+
+
+# Install icon
+
+if [ -f "$SOURCE_DIR/assets/$APP_NAME.svg" ]; then
+
+    mkdir -p "$(dirname "$ICON_PATH")"
+
+    cp "$SOURCE_DIR/assets/$APP_NAME.svg" "$ICON_PATH"
+
+    chmod 644 "$ICON_PATH"
+
+    success "Application icon installed"
+
+else
+
+    warning "Icon file not found"
+
+fi
 
 
 
@@ -216,10 +229,10 @@ success "Virtual environment created"
 
 echo "Installing Python dependencies..."
 
+
 "$INSTALL_DIR/venv/bin/pip" install --upgrade pip >/dev/null
 
 "$INSTALL_DIR/venv/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
-
 
 
 success "Python dependencies installed"
@@ -246,14 +259,29 @@ Name=Boot Switcher
 Comment=Switch EFI boot entries
 Exec=$BIN_PATH
 Path=$INSTALL_DIR
-Icon=computer
+Icon=$APP_NAME
 Terminal=false
-Categories=Utility;
+Categories=Utility;System;
 StartupNotify=true
 EOF
 
 
-chmod +x "$DESKTOP_PATH"
+chmod 644 "$DESKTOP_PATH"
+
+
+if command -v update-desktop-database >/dev/null 2>&1; then
+
+    update-desktop-database /usr/share/applications
+
+fi
+
+
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+
+    gtk-update-icon-cache /usr/share/icons/hicolor
+
+fi
+
 
 
 success "Application menu entry created"
