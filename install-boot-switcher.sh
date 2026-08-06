@@ -45,7 +45,6 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 
-
 if [ ! -d /sys/firmware/efi ]; then
 
     error "UEFI firmware not detected"
@@ -63,7 +62,6 @@ success "UEFI firmware detected"
 echo
 echo "Checking dependencies..."
 echo
-
 
 
 install_package() {
@@ -174,9 +172,7 @@ echo "Installing Boot Switcher..."
 echo
 
 
-
 TEMP_DIR=$(mktemp -d)
-
 
 
 echo "Downloading files..."
@@ -184,14 +180,11 @@ echo "Downloading files..."
 curl -L "$REPO" -o "$TEMP_DIR/source.tar.gz"
 
 
-
 mkdir -p "$TEMP_DIR/extract"
-
 
 
 tar -xzf "$TEMP_DIR/source.tar.gz" \
 -C "$TEMP_DIR/extract"
-
 
 
 SOURCE_DIR=$(find "$TEMP_DIR/extract" \
@@ -210,7 +203,6 @@ mkdir -p "$INSTALL_DIR"
 cp "$SOURCE_DIR/run.py" "$INSTALL_DIR/"
 cp -r "$SOURCE_DIR/src" "$INSTALL_DIR/"
 cp "$SOURCE_DIR/requirements.txt" "$INSTALL_DIR/"
-
 
 
 success "Files copied"
@@ -242,17 +234,16 @@ echo "Creating virtual environment..."
 python3 -m venv "$INSTALL_DIR/venv"
 
 
-
 success "Virtual environment created"
 
 
 
 echo "Installing Python dependencies..."
 
+
 "$INSTALL_DIR/venv/bin/pip" install --upgrade pip >/dev/null
 
 "$INSTALL_DIR/venv/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
-
 
 
 success "Python dependencies installed"
@@ -268,7 +259,6 @@ EOF
 
 
 chmod +x "$BIN_PATH"
-
 
 
 success "Command installed: $BIN_PATH"
@@ -322,17 +312,30 @@ echo
 read -p "Create desktop shortcut? (y/n): " answer
 
 
-
 if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
+
+
+    if [ -n "$SUDO_USER" ]; then
+
+        REAL_USER="$SUDO_USER"
+        REAL_HOME=$(eval echo "~$REAL_USER")
+
+    else
+
+        REAL_USER=$(whoami)
+        REAL_HOME="$HOME"
+
+    fi
+
 
 
     if command -v xdg-user-dir >/dev/null 2>&1; then
 
-        DESKTOP_DIR=$(xdg-user-dir DESKTOP)
+        DESKTOP_DIR=$(sudo -u "$REAL_USER" xdg-user-dir DESKTOP)
 
     else
 
-        DESKTOP_DIR="$HOME/Desktop"
+        DESKTOP_DIR="$REAL_HOME/Desktop"
 
     fi
 
@@ -341,10 +344,24 @@ if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
     if [ -d "$DESKTOP_DIR" ]; then
 
 
-        cp "$DESKTOP_PATH" "$DESKTOP_DIR/$APP_NAME.desktop"
+        cp "$DESKTOP_PATH" \
+        "$DESKTOP_DIR/$APP_NAME.desktop"
+
+
+        chown "$REAL_USER:$REAL_USER" \
+        "$DESKTOP_DIR/$APP_NAME.desktop"
 
 
         chmod +x "$DESKTOP_DIR/$APP_NAME.desktop"
+
+
+        if command -v gio >/dev/null 2>&1; then
+
+            sudo -u "$REAL_USER" gio set \
+            "$DESKTOP_DIR/$APP_NAME.desktop" \
+            metadata::trusted true
+
+        fi
 
 
         success "Desktop shortcut created"
