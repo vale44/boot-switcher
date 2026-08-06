@@ -11,18 +11,22 @@ BIN_PATH="/usr/local/bin/$APP_NAME"
 
 DESKTOP_PATH="/usr/share/applications/$APP_NAME.desktop"
 
+ICON_PATH="/usr/share/icons/hicolor/scalable/apps/$APP_NAME.svg"
 
-# Find the real user when running with sudo
+
+
+# Find real user when running with sudo
+
 REAL_USER=${SUDO_USER:-$USER}
 
 REAL_HOME=$(eval echo "~$REAL_USER")
 
-USER_DESKTOP="$REAL_HOME/Desktop/$APP_NAME.desktop"
 
 
 GREEN="\033[0;32m"
 YELLOW="\033[1;33m"
 RESET="\033[0m"
+
 
 
 success()
@@ -63,6 +67,8 @@ echo
 
 
 
+# Application files
+
 if [ -d "$INSTALL_DIR" ]; then
 
     rm -rf "$INSTALL_DIR"
@@ -76,6 +82,8 @@ else
 fi
 
 
+
+# Terminal command
 
 if [ -f "$BIN_PATH" ]; then
 
@@ -91,6 +99,8 @@ fi
 
 
 
+# Application menu entry
+
 if [ -f "$DESKTOP_PATH" ]; then
 
     rm -f "$DESKTOP_PATH"
@@ -105,6 +115,36 @@ fi
 
 
 
+# Icon
+
+if [ -f "$ICON_PATH" ]; then
+
+    rm -f "$ICON_PATH"
+
+    success "Removed application icon"
+
+else
+
+    warning "Application icon not found"
+
+fi
+
+
+
+# Desktop shortcut
+
+if command -v xdg-user-dir >/dev/null 2>&1; then
+
+    USER_DESKTOP=$(sudo -u "$REAL_USER" xdg-user-dir DESKTOP)/$APP_NAME.desktop
+
+else
+
+    USER_DESKTOP="$REAL_HOME/Desktop/$APP_NAME.desktop"
+
+fi
+
+
+
 if [ -f "$USER_DESKTOP" ]; then
 
     rm -f "$USER_DESKTOP"
@@ -114,6 +154,24 @@ if [ -f "$USER_DESKTOP" ]; then
 else
 
     warning "Desktop shortcut not found"
+
+fi
+
+
+
+# Refresh desktop/icon caches
+
+if command -v update-desktop-database >/dev/null 2>&1; then
+
+    update-desktop-database /usr/share/applications >/dev/null 2>&1 || true
+
+fi
+
+
+
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+
+    gtk-update-icon-cache /usr/share/icons/hicolor >/dev/null 2>&1 || true
 
 fi
 
