@@ -45,6 +45,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 
+
 if [ ! -d /sys/firmware/efi ]; then
 
     error "UEFI firmware not detected"
@@ -58,9 +59,11 @@ fi
 success "UEFI firmware detected"
 
 
+
 echo
 echo "Checking dependencies..."
 echo
+
 
 
 install_package() {
@@ -100,6 +103,7 @@ install_package() {
 }
 
 
+
 check_command() {
 
     CMD="$1"
@@ -115,6 +119,7 @@ check_command() {
         warning "$CMD missing - installing"
 
         install_package "$PACKAGE"
+
 
         if command -v "$CMD" >/dev/null 2>&1; then
 
@@ -133,9 +138,11 @@ check_command() {
 }
 
 
+
 check_command python3 python3
 check_command efibootmgr efibootmgr
 check_command pkexec policykit-1
+
 
 
 if ! python3 -m venv --help >/dev/null 2>&1; then
@@ -149,7 +156,7 @@ if ! python3 -m venv --help >/dev/null 2>&1; then
 
     else
 
-        error "Please install python3-venv manually"
+        error "Please install Python venv manually"
 
         exit 1
 
@@ -167,7 +174,9 @@ echo "Installing Boot Switcher..."
 echo
 
 
+
 TEMP_DIR=$(mktemp -d)
+
 
 
 echo "Downloading files..."
@@ -175,13 +184,21 @@ echo "Downloading files..."
 curl -L "$REPO" -o "$TEMP_DIR/source.tar.gz"
 
 
+
 mkdir -p "$TEMP_DIR/extract"
 
 
-tar -xzf "$TEMP_DIR/source.tar.gz" -C "$TEMP_DIR/extract"
+
+tar -xzf "$TEMP_DIR/source.tar.gz" \
+-C "$TEMP_DIR/extract"
 
 
-SOURCE_DIR=$(find "$TEMP_DIR/extract" -maxdepth 1 -type d -name "boot-switcher-*")
+
+SOURCE_DIR=$(find "$TEMP_DIR/extract" \
+-maxdepth 1 \
+-type d \
+-name "boot-switcher-*")
+
 
 
 rm -rf "$INSTALL_DIR"
@@ -189,16 +206,18 @@ rm -rf "$INSTALL_DIR"
 mkdir -p "$INSTALL_DIR"
 
 
-cp -r "$SOURCE_DIR/run.py" "$INSTALL_DIR/"
+
+cp "$SOURCE_DIR/run.py" "$INSTALL_DIR/"
 cp -r "$SOURCE_DIR/src" "$INSTALL_DIR/"
 cp "$SOURCE_DIR/requirements.txt" "$INSTALL_DIR/"
+
 
 
 success "Files copied"
 
 
 
-# Install icon
+# Icon installation
 
 if [ -f "$SOURCE_DIR/assets/$APP_NAME.svg" ]; then
 
@@ -212,7 +231,7 @@ if [ -f "$SOURCE_DIR/assets/$APP_NAME.svg" ]; then
 
 else
 
-    warning "Icon file not found"
+    warning "Icon not found"
 
 fi
 
@@ -223,21 +242,24 @@ echo "Creating virtual environment..."
 python3 -m venv "$INSTALL_DIR/venv"
 
 
+
 success "Virtual environment created"
 
 
 
 echo "Installing Python dependencies..."
 
-
 "$INSTALL_DIR/venv/bin/pip" install --upgrade pip >/dev/null
 
 "$INSTALL_DIR/venv/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
 
 
+
 success "Python dependencies installed"
 
 
+
+# Command launcher
 
 cat > "$BIN_PATH" <<EOF
 #!/bin/bash
@@ -248,9 +270,12 @@ EOF
 chmod +x "$BIN_PATH"
 
 
+
 success "Command installed: $BIN_PATH"
 
 
+
+# Application menu entry
 
 cat > "$DESKTOP_PATH" <<EOF
 [Desktop Entry]
@@ -269,11 +294,13 @@ EOF
 chmod 644 "$DESKTOP_PATH"
 
 
+
 if command -v update-desktop-database >/dev/null 2>&1; then
 
     update-desktop-database /usr/share/applications
 
 fi
+
 
 
 if command -v gtk-update-icon-cache >/dev/null 2>&1; then
@@ -288,12 +315,57 @@ success "Application menu entry created"
 
 
 
+# Optional desktop shortcut
+
+echo
+
+read -p "Create desktop shortcut? (y/n): " answer
+
+
+
+if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
+
+
+    if command -v xdg-user-dir >/dev/null 2>&1; then
+
+        DESKTOP_DIR=$(xdg-user-dir DESKTOP)
+
+    else
+
+        DESKTOP_DIR="$HOME/Desktop"
+
+    fi
+
+
+
+    if [ -d "$DESKTOP_DIR" ]; then
+
+
+        cp "$DESKTOP_PATH" "$DESKTOP_DIR/$APP_NAME.desktop"
+
+
+        chmod +x "$DESKTOP_DIR/$APP_NAME.desktop"
+
+
+        success "Desktop shortcut created"
+
+
+    else
+
+        warning "Desktop folder not found, skipping shortcut"
+
+    fi
+
+fi
+
+
+
 rm -rf "$TEMP_DIR"
 
 
 
 echo
-echo "Installation complete!"
+echo -e "${GREEN}Installation complete!${RESET}"
 echo
 echo "Run with:"
 echo
