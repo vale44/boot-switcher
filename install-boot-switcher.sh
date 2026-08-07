@@ -432,7 +432,7 @@ Exec=$BIN_PATH
 Path=$INSTALL_DIR
 Icon=$APP_NAME
 Terminal=false
-Categories=Utility;System;
+Categories=Utility;
 StartupNotify=true
 EOF
 
@@ -507,39 +507,22 @@ if [ -d "$DESKTOP_DIR" ]; then
 
     DESKTOP_FILE="$DESKTOP_DIR/$APP_NAME.desktop"
 
-
-    # Remove old shortcut if present
     rm -f "$DESKTOP_FILE"
 
-
-    # Create shortcut using GNOME-aware method when available
-    if command -v gio >/dev/null 2>&1; then
-
-        sudo -u "$REAL_USER" gio copy \
-        "$DESKTOP_PATH" \
-        "$DESKTOP_FILE"
-
-    else
-
-        cp "$DESKTOP_PATH" \
-        "$DESKTOP_FILE"
-
-    fi
-
+    sed 's|Icon=boot-switcher|Icon=/usr/share/icons/hicolor/scalable/apps/boot-switcher.svg|' \
+    "$DESKTOP_PATH" > "$DESKTOP_FILE"
 
     chown "$REAL_USER:$REAL_USER" "$DESKTOP_FILE"
 
     chmod +x "$DESKTOP_FILE"
 
+    success "Desktop shortcut created"
 
-    # Mark as trusted on desktops supporting it
-    if command -v gio >/dev/null 2>&1; then
+else
 
-        sudo -u "$REAL_USER" gio set \
-        "$DESKTOP_FILE" \
-        metadata::trusted true
+    warning "Desktop folder not found, skipping shortcut"
 
-    fi
+fi
 
 
     # Force file timestamp update
