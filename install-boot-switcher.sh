@@ -509,8 +509,19 @@ if [ -d "$DESKTOP_DIR" ]; then
 
     rm -f "$DESKTOP_FILE"
 
-    sed 's|Icon=boot-switcher|Icon=/usr/share/icons/hicolor/scalable/apps/boot-switcher.svg|' \
+ICON_PATH="/usr/share/icons/hicolor/scalable/apps/boot-switcher.svg"
+
+if [ -f "$ICON_PATH" ]; then
+
+    sed "s|Icon=boot-switcher|Icon=$ICON_PATH|" \
     "$DESKTOP_PATH" > "$DESKTOP_FILE"
+
+else
+
+    sed "s|Icon=boot-switcher|Icon=boot-switcher|" \
+    "$DESKTOP_PATH" > "$DESKTOP_FILE"
+
+fi
 
     chown "$REAL_USER:$REAL_USER" "$DESKTOP_FILE"
 
