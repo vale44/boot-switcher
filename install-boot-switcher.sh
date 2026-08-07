@@ -506,8 +506,24 @@ if [ -d "$DESKTOP_DIR" ]; then
 
 
     # Copy the final application launcher
-    cp "$DESKTOP_PATH" \
-    "$DESKTOP_DIR/$APP_NAME.desktop"
+rm -f "$DESKTOP_DIR/$APP_NAME.desktop"
+
+cat > "$DESKTOP_DIR/$APP_NAME.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=Boot Switcher
+Comment=Switch EFI boot entries
+Exec=$BIN_PATH
+Path=$INSTALL_DIR
+Icon=boot-switcher
+Terminal=false
+Categories=Utility;System;
+StartupNotify=true
+EOF
+
+chown "$REAL_USER:$REAL_USER" "$DESKTOP_DIR/$APP_NAME.desktop"
+
+chmod +x "$DESKTOP_DIR/$APP_NAME.desktop"
 
 
     chown "$REAL_USER:$REAL_USER" \
