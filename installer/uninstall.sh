@@ -19,9 +19,14 @@ ICON_PATH="/usr/share/icons/hicolor/scalable/apps/$APP_NAME.svg"
 
 REAL_USER=${SUDO_USER:-$USER}
 
-REAL_HOME=$(eval echo "~$REAL_USER")
+# Detect user's desktop directory using freedesktop standard
+DESKTOP_DIR=$(sudo -u "$REAL_USER" xdg-user-dir DESKTOP 2>/dev/null || true)
 
-
+if [ -n "$DESKTOP_DIR" ]; then
+    USER_DESKTOP="$DESKTOP_DIR/$APP_NAME.desktop"
+else
+    USER_DESKTOP=""
+fi
 
 GREEN="\033[0;32m"
 YELLOW="\033[1;33m"
@@ -145,7 +150,7 @@ fi
 
 
 
-if [ -f "$USER_DESKTOP" ]; then
+if [ -n "$USER_DESKTOP" ] && [ -f "$USER_DESKTOP" ]; then
 
     rm -f "$USER_DESKTOP"
 

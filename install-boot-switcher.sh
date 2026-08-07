@@ -509,35 +509,24 @@ if [ -d "$DESKTOP_DIR" ]; then
 
     rm -f "$DESKTOP_FILE"
 
-ICON_PATH="/usr/share/icons/hicolor/scalable/apps/boot-switcher.svg"
+    ICON_PATH="/usr/share/icons/hicolor/scalable/apps/boot-switcher.svg"
 
-if [ -f "$ICON_PATH" ]; then
+    if [ -f "$ICON_PATH" ]; then
 
-    sed "s|Icon=boot-switcher|Icon=$ICON_PATH|" \
-    "$DESKTOP_PATH" > "$DESKTOP_FILE"
+        sed "s|Icon=boot-switcher|Icon=$ICON_PATH|" \
+        "$DESKTOP_PATH" > "$DESKTOP_FILE"
 
-else
+    else
 
-    sed "s|Icon=boot-switcher|Icon=boot-switcher|" \
-    "$DESKTOP_PATH" > "$DESKTOP_FILE"
+        sed "s|Icon=boot-switcher|Icon=boot-switcher|" \
+        "$DESKTOP_PATH" > "$DESKTOP_FILE"
 
-fi
+    fi
+
 
     chown "$REAL_USER:$REAL_USER" "$DESKTOP_FILE"
 
     chmod +x "$DESKTOP_FILE"
-
-    success "Desktop shortcut created"
-
-else
-
-    warning "Desktop folder not found, skipping shortcut"
-
-fi
-
-
-    # Force file timestamp update
-    touch "$DESKTOP_FILE"
 
 
     success "Desktop shortcut created"
