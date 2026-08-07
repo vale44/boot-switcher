@@ -475,6 +475,10 @@ fi
 # Desktop shortcut
 # --------------------------------------------------
 
+# --------------------------------------------------
+# Desktop shortcut
+# --------------------------------------------------
+
 if [ -n "$SUDO_USER" ]; then
 
     REAL_USER="$SUDO_USER"
@@ -501,46 +505,45 @@ fi
 
 if [ -d "$DESKTOP_DIR" ]; then
 
-    # Remove possible old cached launcher
-    rm -f "$DESKTOP_DIR/$APP_NAME.desktop"
+    DESKTOP_FILE="$DESKTOP_DIR/$APP_NAME.desktop"
 
 
-    # Copy the final application launcher
-rm -f "$DESKTOP_DIR/$APP_NAME.desktop"
-
-cat > "$DESKTOP_DIR/$APP_NAME.desktop" <<EOF
-[Desktop Entry]
-Type=Application
-Name=Boot Switcher
-Comment=Switch EFI boot entries
-Exec=$BIN_PATH
-Path=$INSTALL_DIR
-Icon=boot-switcher
-Terminal=false
-Categories=Utility;System;
-StartupNotify=true
-EOF
-
-chown "$REAL_USER:$REAL_USER" "$DESKTOP_DIR/$APP_NAME.desktop"
-
-chmod +x "$DESKTOP_DIR/$APP_NAME.desktop"
+    # Remove old shortcut if present
+    rm -f "$DESKTOP_FILE"
 
 
-    chown "$REAL_USER:$REAL_USER" \
-    "$DESKTOP_DIR/$APP_NAME.desktop"
+    # Create shortcut using GNOME-aware method when available
+    if command -v gio >/dev/null 2>&1; then
+
+        sudo -u "$REAL_USER" gio copy \
+        "$DESKTOP_PATH" \
+        "$DESKTOP_FILE"
+
+    else
+
+        cp "$DESKTOP_PATH" \
+        "$DESKTOP_FILE"
+
+    fi
 
 
-    chmod +x "$DESKTOP_DIR/$APP_NAME.desktop"
+    chown "$REAL_USER:$REAL_USER" "$DESKTOP_FILE"
+
+    chmod +x "$DESKTOP_FILE"
 
 
-    # GNOME trust metadata
+    # Mark as trusted on desktops supporting it
     if command -v gio >/dev/null 2>&1; then
 
         sudo -u "$REAL_USER" gio set \
-        "$DESKTOP_DIR/$APP_NAME.desktop" \
+        "$DESKTOP_FILE" \
         metadata::trusted true
 
     fi
+
+
+    # Force file timestamp update
+    touch "$DESKTOP_FILE"
 
 
     success "Desktop shortcut created"
