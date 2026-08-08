@@ -144,9 +144,16 @@ class InfoDialog(QDialog):
         layout = QVBoxLayout()
 
 
+        display_name = entry["name"]
+
+        if len(display_name) > 50:
+            display_name = display_name[:47] + "..."
+
         title = QLabel(
-            entry["name"]
+            display_name
         )
+
+        title.setWordWrap(True)
 
         title.setStyleSheet(
             """
@@ -281,8 +288,13 @@ class BootSwitcher(QWidget):
             )
 
 
+            display_name = entry["name"]
+
+            if len(display_name) > 30:
+                display_name = display_name[:27] + "..."
+
             radio = QRadioButton(
-                entry["name"]
+                display_name
             )
 
 
